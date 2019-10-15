@@ -62,7 +62,11 @@ int main( int argc, char* args[] )
             if (pid == 0) { 
             close(pfd[0]);
             printf("Child (%d): Start the computation ...\n", (int)getpid());
-            MSG child[rows];
+            MSG *child = malloc(rows*sizeof(MSG));
+            if (child == NULL) {
+                    printf("Out of memory, can't creat child MSG struct array!!\n");
+                    exit(1);
+            }
             int st_row_count = 0; //this count is for array of struct message
             for (y=vert; y<rows+vert; y++) {
             printf("Child(%d): y value %d\n",(int)getpid(), y);
@@ -81,6 +85,7 @@ int main( int argc, char* args[] )
                 write(pfd[1], &child[i], sizeof(MSG));
             }
             close(pfd[1]);
+            free(child);
             exit(0);
             }
         vert += rows; 
@@ -101,7 +106,7 @@ int main( int argc, char* args[] )
                 break;
             }
             printf("received row value %d\n", receive.row_index);
-            if (receive.row_index >=0 && receive.row_index <= IMAGE_HEIGHT){
+            if (receive.row_index >= 0 && receive.row_index <= IMAGE_HEIGHT){
                 for(int j=0; j<IMAGE_WIDTH; j++){
                 pixels[receive.row_index*IMAGE_WIDTH+j] = receive.rowdata[j];
             }
@@ -126,5 +131,6 @@ int main( int argc, char* args[] )
 	//Draw the image by using the SDL2 library
 	DrawImage(pixels, IMAGE_WIDTH, IMAGE_HEIGHT, "Mandelbrot demo", 3000);
 	
+    free(pixels);
 	return 0;
 }
