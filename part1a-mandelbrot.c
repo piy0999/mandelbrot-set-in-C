@@ -6,12 +6,13 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include "Mandel.h"
 #include "draw.h"
 
-#define IMAGE_WIDTH 10
-#define IMAGE_HEIGHT 10
+//#define IMAGE_WIDTH 200
+//#define IMAGE_HEIGHT 200
 
 typedef struct message {
     int row_index;
@@ -64,7 +65,7 @@ int main( int argc, char* args[] )
             MSG child[rows];
             int st_row_count = 0; //this count is for array of struct message
             for (y=vert; y<rows+vert; y++) {
-            printf("Child(%d): y value %d\n",(int)getpid(), y);
+            //printf("Child(%d): y value %d\n",(int)getpid(), y);
             if (y >= IMAGE_HEIGHT){
                 break;
             }
