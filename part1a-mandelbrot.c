@@ -85,7 +85,7 @@ int main( int argc, char* args[] )
                 write(pfd[1], &child[i], sizeof(MSG));
             }
             close(pfd[1]);
-            free(child);
+            //free(child);
             exit(0);
             }
         vert += rows; 
