@@ -63,12 +63,12 @@ int main( int argc, char* args[] )
             printf("Child (%d): Start the computation ...\n", (int)getpid());
             MSG *child = malloc(rows*sizeof(MSG));
             if (child == NULL) {
-                    printf("Out of memory, can't creat child MSG struct array!!\n");
+                    printf("Out of memory, can't create child MSG struct array!!\n");
                     exit(1);
             }
             int st_row_count = 0; //this count is for array of struct message
             for (int y=vert; y<rows+vert; y++) {
-            printf("Child(%d): y value %d and st_row_count is %d\n",(int)getpid(), y,st_row_count);
+            //printf("Child(%d): y value %d and st_row_count is %d\n",(int)getpid(), y,st_row_count);
             if (y >= IMAGE_HEIGHT){
                 break;
             }
@@ -105,7 +105,7 @@ int main( int argc, char* args[] )
             else{
                 break;
             }
-            printf("received row value %d\n", receive.row_index);
+            //printf("received row value %d\n", receive.row_index);
             if (receive.row_index >= 0 && receive.row_index <= IMAGE_HEIGHT){
                 for(int j=0; j<IMAGE_WIDTH; j++){
                 pixels[receive.row_index*IMAGE_WIDTH+j] = receive.rowdata[j];
