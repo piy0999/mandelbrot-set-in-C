@@ -11,8 +11,8 @@
 #include "Mandel.h"
 #include "draw.h"
 
-//#define IMAGE_WIDTH 200
-//#define IMAGE_HEIGHT 200
+//#define IMAGE_WIDTH 10
+//#define IMAGE_HEIGHT 10
 
 typedef struct message {
     int row_index;
@@ -65,7 +65,7 @@ int main( int argc, char* args[] )
             MSG child[rows];
             int st_row_count = 0; //this count is for array of struct message
             for (y=vert; y<rows+vert; y++) {
-            //printf("Child(%d): y value %d\n",(int)getpid(), y);
+            printf("Child(%d): y value %d\n",(int)getpid(), y);
             if (y >= IMAGE_HEIGHT){
                 break;
             }
@@ -77,7 +77,9 @@ int main( int argc, char* args[] )
     	    }
             st_row_count += 1;
             }
-            write(pfd[1], child, rows * sizeof(MSG));
+            for (int i = 0; i < st_row_count; i++){
+                write(pfd[1], &child[i], sizeof(MSG));
+            }
             close(pfd[1]);
             exit(0);
             }
@@ -85,20 +87,28 @@ int main( int argc, char* args[] )
         count += 1;
     }
     count = 0;
+    int prev = -1;
     while (count < num_child){
         close(pfd[1]);
-        MSG receive[rows];
-        read(pfd[0], receive, rows * sizeof(MSG));
-        pid_t terminated_pid = wait(NULL);
         for (int i=0; i < rows; i++){
-            int temp_y = receive[i].row_index;
-            if (temp_y >= IMAGE_HEIGHT){
+            MSG receive;
+            read(pfd[0], &receive, sizeof(MSG));
+            int cur = receive.row_index;
+            if (prev != cur){
+                prev = cur;
+            }
+            else{
                 break;
             }
-            for(int j=0; j<IMAGE_WIDTH; j++){
-                pixels[temp_y*IMAGE_WIDTH+j] = receive[i].rowdata[j];
+            printf("received row value %d\n", receive.row_index);
+            if (receive.row_index >=0 && receive.row_index <= IMAGE_HEIGHT){
+                for(int j=0; j<IMAGE_WIDTH; j++){
+                pixels[receive.row_index*IMAGE_WIDTH+j] = receive.rowdata[j];
             }
+            }
+            
         }
+        pid_t terminated_pid = wait(NULL);
         printf("Child (%d) was terminated\n", (int) terminated_pid);
         count += 1;
     }
