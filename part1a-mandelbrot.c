@@ -50,7 +50,6 @@ int main( int argc, char* args[] )
 	//keep track of the execution time - we are going to parallelize this part
 	printf("Start the computation ...\n");
 	clock_gettime(CLOCK_MONOTONIC, &start_compute);
-    int x, y;
 	float difftime;
     int count = 0;
     int rows = (IMAGE_HEIGHT / num_child) + 1;
@@ -68,19 +67,20 @@ int main( int argc, char* args[] )
                     exit(1);
             }
             int st_row_count = 0; //this count is for array of struct message
-            for (y=vert; y<rows+vert; y++) {
-            printf("Child(%d): y value %d\n",(int)getpid(), y);
+            for (int y=vert; y<rows+vert; y++) {
+            printf("Child(%d): y value %d and st_row_count is %d\n",(int)getpid(), y,st_row_count);
             if (y >= IMAGE_HEIGHT){
                 break;
             }
             child[st_row_count].row_index = y;
-            for (x=0; x<IMAGE_WIDTH; x++) {
+            for (int x=0; x<IMAGE_WIDTH; x++) {
 			//compute a value for each point c (x, y) in the complex plane
     		// pixels[y*IMAGE_WIDTH+x] = Mandelbrot(x, y);
                 child[st_row_count].rowdata[x] = Mandelbrot(x, y);
     	    }
             st_row_count += 1;
             }
+            st_row_count = 0;
             for (int i = 0; i < st_row_count; i++){
                 write(pfd[1], &child[i], sizeof(MSG));
             }
