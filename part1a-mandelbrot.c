@@ -83,13 +83,13 @@ int main( int argc, char* args[] )
     	    }
             st_row_count += 1;
             }
-            printf("st_row_count2 = %d\n", st_row_count);
+            printf("st_row_count2 = %d \n", st_row_count);
             for (int i = 0; i < st_row_count; i++){
                 write(pfd[1], &child[i], sizeof(MSG));
             }
+            printf("Reached here with PID %d \n", (int) getpid());
             st_row_count = 0;
-            close(pfd[1]);
-            //free(child);
+            //close(pfd[1]);
             exit(0);
             }
         vert += rows; 
@@ -99,9 +99,13 @@ int main( int argc, char* args[] )
     int prev = -1;
     while (count < num_child){
         close(pfd[1]);
-        for (int i=0; i < rows; i++){
+        while (1) {
             MSG receive;
-            read(pfd[0], &receive, sizeof(MSG));
+            int response = read(pfd[0], &receive, sizeof(MSG));
+            if (response == 0){
+                break;
+            }
+            /*
             int cur = receive.row_index;
             if (prev != cur){
                 prev = cur;
@@ -109,6 +113,7 @@ int main( int argc, char* args[] )
             else{
                 break;
             }
+            */
             //printf("received row value %d\n", receive.row_index);
             if (receive.row_index >= 0 && receive.row_index <= IMAGE_HEIGHT){
                 for(int j=0; j<IMAGE_WIDTH; j++){
@@ -119,7 +124,7 @@ int main( int argc, char* args[] )
             
         }
         pid_t terminated_pid = wait(NULL);
-        printf("Child (%d) was terminated\n", (int) terminated_pid);
+        printf("Child (%d) was terminated\n", (int) terminated_pid); 
         count += 1;
     }
 
