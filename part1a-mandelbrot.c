@@ -52,7 +52,7 @@ int main( int argc, char* args[] )
 	clock_gettime(CLOCK_MONOTONIC, &start_compute);
 	float difftime;
     int count = 0;
-    int rows = (IMAGE_HEIGHT / num_child) + 1;
+    int rows = (IMAGE_HEIGHT / num_child);
     int vert = 0;
     int pfd[2];
     pipe(pfd); 
@@ -67,6 +67,8 @@ int main( int argc, char* args[] )
                     exit(1);
             }
             int st_row_count = 0; //this count is for array of struct message
+            // NEED TO FIND A BETTER WAY TO DIVIDE BLOCKS FOR COMPUTATION
+            printf("st_row_count1 = %d\n", st_row_count);
             for (int y=vert; y<rows+vert; y++) {
             //printf("Child(%d): y value %d and st_row_count is %d\n",(int)getpid(), y,st_row_count);
             if (y >= IMAGE_HEIGHT){
@@ -75,15 +77,17 @@ int main( int argc, char* args[] )
             child[st_row_count].row_index = y;
             for (int x=0; x<IMAGE_WIDTH; x++) {
 			//compute a value for each point c (x, y) in the complex plane
-    		// pixels[y*IMAGE_WIDTH+x] = Mandelbrot(x, y);
+    		// pixels[y*IMAGE_WIDTH+x] = Mandelbrot(x, y)
                 child[st_row_count].rowdata[x] = Mandelbrot(x, y);
+                //printf("x=%d , y=%d , val=%.2f, st_rc=%d\n", x,y,child[st_row_count].rowdata[x],st_row_count);
     	    }
             st_row_count += 1;
             }
-            st_row_count = 0;
+            printf("st_row_count2 = %d\n", st_row_count);
             for (int i = 0; i < st_row_count; i++){
                 write(pfd[1], &child[i], sizeof(MSG));
             }
+            st_row_count = 0;
             close(pfd[1]);
             //free(child);
             exit(0);
@@ -108,6 +112,7 @@ int main( int argc, char* args[] )
             //printf("received row value %d\n", receive.row_index);
             if (receive.row_index >= 0 && receive.row_index <= IMAGE_HEIGHT){
                 for(int j=0; j<IMAGE_WIDTH; j++){
+                //printf("rowdata for row_y %d is received as %.2f\n", receive.row_index , receive.rowdata[j]);
                 pixels[receive.row_index*IMAGE_WIDTH+j] = receive.rowdata[j];
             }
             }
