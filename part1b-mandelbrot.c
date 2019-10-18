@@ -39,28 +39,28 @@ int mpipe[2];
 // create task PIPE for passing tasks between boss and workers
 int tpipe[2];
 
-//SEE IF YOU CAN USE THIS AS A STRUCT TO COUNT THE NUM OF TASKS PROCESSED
+//Arrays to store the PIDs and the number of times these processes work on tasks
 int pid[16];
 int c_pid[16];
 
+// SIGINT signal handler, exits the child process everytime when called using kill from parent
 void sigint_handler() {
 
     printf("Process %d is interrupted by ^C. Bye Bye\n",(int)getpid());
     exit(0);
 }
 
+// SIGUSR1 handler, after being called using kill the child receives a task from task PIPE and performs the madelbrot set computation
+// until the num of rows as specified in the command line when starting the program and returns the result row by row to parent
 void sigusr1_handler() {
-    //close(tpipe[1]);
-    //printf("Received SIGUSR1\n");
     TASK received;
     if (read(tpipe[0], &received, sizeof(TASK)) < 0){
         printf("Error in reading from Task pipe with pid %d\n", (int)getpid());
     }
-    printf("Child received %d\n", received.start_row);
+    // Start recording the elapse time
     struct timespec start_compute, end_compute;
     clock_gettime(CLOCK_MONOTONIC, &start_compute);
-    // As Child only writes to the PIPE, the reading from PIPE is closed
-    //close(mpipe[0]);
+    
     printf("Child(%d) : Start the computation ...\n", (int)getpid());
     // Create an array of struct MSG for storing all the computations done by this child
     MSG *child = malloc(received.num_of_rows*sizeof(MSG));
@@ -71,7 +71,7 @@ void sigusr1_handler() {
     int st_row_count = 0; //this count is for array of struct message
             
     for (int y=received.start_row; y<received.start_row+received.num_of_rows; y++) {
-    // Avoid passing IMAGE_HEIGHT during loop
+    // Avoid passing value > IMAGE_HEIGHT during loop
     if (y >= IMAGE_HEIGHT){
         break;
     }
@@ -86,15 +86,15 @@ void sigusr1_handler() {
     }
     st_row_count += 1;
     }
+    
     // write each row from array of structs to PIPE, hence write ROW BY ROW
-    //printf("A child reached here with pid %d and st_row_ct %d\n", (int)getpid(), st_row_count);
     for (int i = 0; i < st_row_count; i++){
         if (write(mpipe[1], &child[i], sizeof(MSG)) < 0){
             printf("Error in writing to MSG pipe with pid %d\n", (int)getpid());
         }
-        //printf("Child sent %d\n", (int)child[i].child_pid);
-        //printf("Process %d with loop ct %d is writing with code %d\n",(int)getpid(),i,resp);
     }
+    // Free the memory space consumed by this array of structs as it is not needed anymore after being written back to the parent
+    free(child);
     // Finish computation time recording
     clock_gettime(CLOCK_MONOTONIC, &end_compute);
 	float difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;
@@ -103,8 +103,8 @@ void sigusr1_handler() {
 }
 
 int main( int argc, char* args[] )
-{   // check if the number of childs have been passed in the program from command line
-
+{   
+    // check if the number of childs and number of rows in a task have been passed in the program from command line
     if (argc != 3) {
         printf("Usage: ./1bmandel [number of child processes] [number of rows in a task]");
         return 0;
@@ -120,11 +120,12 @@ int main( int argc, char* args[] )
 	//get the start time
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	
-    if (pipe(mpipe) == 0){
-        printf("message pipe created\n");
+    // Create both the message and task pipes
+    if (pipe(mpipe) < 0){
+        printf("Error creating MSG pipe\n");
     }
-    if (pipe(tpipe) == 0){
-        printf("Task pipe created\n");
+    if (pipe(tpipe) < 0){
+        printf("Error creating TASK pipe\n");
     }
     
 	//generate mandelbrot image and store each pixel for later display
@@ -142,88 +143,51 @@ int main( int argc, char* args[] )
         printf("Start collecting image lines\n"); // As Pixels was successfully created
     
     }
-	// Declare variables for workload division among child processes
 	float difftime;
     int count = 0;
-    //int rows = (IMAGE_HEIGHT / num_child);
-    //int vert = 0;
+
     // create num_child no. of childs as given as input
     while (count < num_child){
         // fork to create a child
         pid[count] = fork();
             if (pid[count] == 0) { 
-            
+            // Install the signal handlers for the child
             signal(SIGINT, sigint_handler);
             signal(SIGUSR1, sigusr1_handler);
 
+            // As Child only reads from the MSG PIPE, the writing to PIPE is closed
             if (close(tpipe[1]) < 0){
                 printf("Error in Closing write for Tpipe with pid %d\n", (int)getpid());
             }
+            // As Child only writes to the MSG PIPE, the reading from PIPE is closed
             if (close(mpipe[0]) < 0){
                 printf("Error in Closing read for Mpipe with pid %d\n", (int)getpid());
             }
             printf("Child(%d) : Start up. Wait for task!\n", (int)getpid());
             /* use sigaction to install a signal handler named sigint_handler1 */ 
-            
+            // Loop until signals are received
             while (1) {
-                sleep(1);
-            }
-            /*
-            // Start recording computation time after child starts working
-            struct timespec start_compute, end_compute;
-            clock_gettime(CLOCK_MONOTONIC, &start_compute);
-            // As Child only writes to the PIPE, the reading from PIPE is closed
-            close(mpipe[0]);
-            printf("Child(%d) : Start the computation ...\n", (int)getpid());
-            // Create an array of struct MSG for storing all the computations done by this child
-            MSG *child = malloc(rows*sizeof(MSG));
-            if (child == NULL) {
-                    printf("Out of memory, can't create child MSG struct array!!\n");
-                    exit(1);
-            }
-            int st_row_count = 0; //this count is for array of struct message
-            
-            for (int y=vert; y<rows+vert; y++) {
-            // Avoid passing IMAGE_HEIGHT during loop
-            if (y >= IMAGE_HEIGHT){
-                break;
-            }
-            child[st_row_count].row_index = y;
-            for (int x=0; x<IMAGE_WIDTH; x++) {
-                //compute a value for each point c (x, y) in the complex plane and store in array of struct message
-                child[st_row_count].rowdata[x] = Mandelbrot(x, y);
-    	    }
-            st_row_count += 1;
-            }
-            // write each row from array of structs to PIPE, hence write ROW BY ROW
-            for (int i = 0; i < st_row_count; i++){
-                write(mpipe[1], &child[i], sizeof(MSG));
-            }
-            st_row_count = 0;
-            // Finish computation time recording
-            clock_gettime(CLOCK_MONOTONIC, &end_compute);
-	        difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;
-	        printf("Child(%d) :     ... completed. Elapse time = %.3f ms\n", (int)getpid(),difftime);
-            // Terminate this child process
-            
-            exit(0);
-            */
+                ;
             }
             
-        // Increment the start of variable y for the next child by IMAGE_HEIGHT/num_child (rows)
-        //vert += rows; 
+            }
+        // Do this for all the children
         count += 1;
     }
+    // Parent process begins
     count = 0;
+    // Counting the row of tasks distributed, the start row value for each task
     int r_count = 0;
-    // Read from all Child using Wait
+    // Parent only writes to TASK pipe so close the reading end
      if (close(tpipe[0]) < 0){
             printf("Error in Closing read for Tpipe with pid %d\n", (int)getpid());
 
         }
+    // Parent only reads from the Message pipe so close the writing end 
     if (close(mpipe[1]) < 0){
             printf("Error in Closing write for Mpipe with pid %d\n", (int)getpid());
     }
+    // Distribute each of the child one task by writing to Task pipe
     for (int i=0; i < num_child; i++){
         TASK send;
         send.num_of_rows = num_rows;
@@ -231,55 +195,38 @@ int main( int argc, char* args[] )
         write(tpipe[1], &send, sizeof(TASK));
         r_count += num_rows;
     }
-
+    // Send SIGUSR1 signal to each of the child to start computation
     for (int i=0 ; i < num_child; i++){
         sleep(1);
         kill(pid[i],SIGUSR1);
         sleep(1);
         c_pid[i] = 1;
     }
-    /*
-    for (int i=0 ; i < num_child; i++){
-        sleep(1);
-        kill(pid[i],SIGINT);
-        sleep(1);
-    }
-    */
-    //while (count < num_child){
-        // This time we only use PIPE for reading and close the write end
-        //
-        // Loop until PIPE reaches EOF (response from read = 0)
-        while (1) {
+    // Until all results are not received or the message pipe reaches EOF or leads to an error keep looping
+    while (1) {
 
             MSG receive;
-            // read from PIPE row by row
+            // read from message PIPE row by row
             int response = read(mpipe[0], &receive, sizeof(MSG));
-            //printf("parent received %d\n", receive.row_index);
+            // If EOF or error in read then break out of loop
             if (response <= 0){
                 printf("Error in reading from MSG pipe with pid %d\n", (int)getpid());
                 break;
             }
             
-            //printf("received response code %d\n", response);
-            //printf("receive row %d\n",receive.row_index);
-            //printf("receive pid %d\n", receive.child_pid);
-            //printf("parent receive rowdata %f\n", receive.rowdata[0]);
-            //if (response == 0){
-                
-            //}
-            // checking against any unlinkely garbage value that migt cause segmentation fault
+            // checking against any unlinkely garbage value that might cause segmentation fault
             
             if (receive.row_index >= 0 && receive.row_index < IMAGE_HEIGHT){
                 for(int j=0; j<IMAGE_WIDTH; j++){
                 // Copy data received from PIPE to pixels array for drawing
-                //printf("Parent received row_index %d with rowdata %f \n", receive.row_index, receive.rowdata[j]);
                 pixels[receive.row_index*IMAGE_WIDTH+j] = receive.rowdata[j];
             }
             }
-            // checking if the received message contains the worker's PID
+            // If all the results have been received (the last row index is returned) then terminate loop
             if (receive.row_index == IMAGE_HEIGHT-1){
                 break;
             }
+            // checking if the received message contains the worker's PID
             int flag = 0;
             for (int i=0 ; i < num_child; i++){
                 
@@ -291,9 +238,9 @@ int main( int argc, char* args[] )
                 }
             }
             
-
+            // If the received row contains the PID of the child, it means the child has finished computation and it is idle so 
+            // assign it a new task by calling SIGUSR1 and writing to Task PIPE before sending the signal
             if (flag == 1){
-                //printf("I reached here with r_count %d and IMAGE_HEIGHT %d\n", r_count, IMAGE_HEIGHT);
                 if (r_count < IMAGE_HEIGHT){
                     TASK send;
                     send.num_of_rows = num_rows;
@@ -301,7 +248,6 @@ int main( int argc, char* args[] )
                     if (write(tpipe[1], &send, sizeof(TASK)) < 0){
                         printf("Error in writing to Task pipe with pid %d\n", (int)getpid());
                     }
-                    //printf("parent sent %d\n", send.start_row);
                     r_count += num_rows;
                     sleep(1);
                     kill(receive.child_pid,SIGUSR1);
@@ -312,24 +258,21 @@ int main( int argc, char* args[] )
             
             
         }
-
-        for (int i=0 ; i < num_child; i++){
-            //printf("Sending SIGINT NOW\n");
+    // While loop terminates and processing has finished so send SIGINT to each child to terminate the child processes
+    for (int i=0 ; i < num_child; i++){
             sleep(1);
             kill(pid[i],SIGINT);
             sleep(1);
-        }
+    }
 
         
-        // Wait until the child gets terminated
-        while (count < num_child){
+    // Wait until all children get terminated
+    while (count < num_child){
         pid_t terminated = wait(NULL);
         printf("Child process %d terminated and completed %d tasks\n",terminated,c_pid[count]);
         // Do this until all child are terminated
         count += 1;
-        }
-    //}
-    
+    }
     
     printf("All Child processes have completed\n");
     
@@ -355,8 +298,8 @@ int main( int argc, char* args[] )
 	printf("Draw the image\n");
 	//Draw the image by using the SDL2 library
 	DrawImage(pixels, IMAGE_WIDTH, IMAGE_HEIGHT, "Mandelbrot demo", 3000);
-	// free memory of pixels after drawing
-    
+	
+    // free memory of pixels after drawing
     free(pixels);
 	return 0;
 }
