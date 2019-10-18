@@ -91,15 +91,21 @@ void sigusr1_handler() {
         if (write(mpipe[1], &child[i], sizeof(MSG)) < 0){
             printf("Error in writing to MSG pipe with pid %d\n", (int)getpid());
         }
-        printf("Child sent %d\n", (int)child[i].child_pid);
+        //printf("Child sent %d\n", (int)child[i].child_pid);
         //printf("Process %d with loop ct %d is writing with code %d\n",(int)getpid(),i,resp);
     }
     // Finish computation time recording
     clock_gettime(CLOCK_MONOTONIC, &end_compute);
 	float difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;
 	printf("Child(%d) :     ... completed. Elapse time = %.3f ms\n", (int)getpid(),difftime);
-
-
+    
+    if (received.start_row+received.num_of_rows >= IMAGE_HEIGHT){
+        printf("I CAME TO CLOSE THE WRITE PIPE IN CHILD\n");
+    if (close(mpipe[1]) < 0){
+        printf("Error in Closing write for Mpipe with pid %d\n", (int)getpid());
+    }
+    }
+    
 }
 
 int main( int argc, char* args[] )
@@ -162,7 +168,6 @@ int main( int argc, char* args[] )
             if (close(mpipe[0]) < 0){
                 printf("Error in Closing read for Mpipe with pid %d\n", (int)getpid());
             }
-            
             printf("Child(%d) : Start up. Wait for task!\n", (int)getpid());
             /* use sigaction to install a signal handler named sigint_handler1 */ 
             
@@ -218,15 +223,13 @@ int main( int argc, char* args[] )
     count = 0;
     int r_count = 0;
     // Read from all Child using Wait
-    
-    if (close(tpipe[0]) < 0){
-        printf("Error in Closing read for Tpipe with pid %d\n", (int)getpid());
+     if (close(tpipe[0]) < 0){
+            printf("Error in Closing read for Tpipe with pid %d\n", (int)getpid());
 
-    }
+        }
     if (close(mpipe[1]) < 0){
-        printf("Error in Closing write for Mpipe with pid %d\n", (int)getpid());
+            printf("Error in Closing write for Mpipe with pid %d\n", (int)getpid());
     }
-    
     for (int i=0; i < num_child; i++){
         TASK send;
         send.num_of_rows = num_rows;
@@ -251,31 +254,37 @@ int main( int argc, char* args[] )
         // This time we only use PIPE for reading and close the write end
         //
         // Loop until PIPE reaches EOF (response from read = 0)
-        
         while (1) {
+
             MSG receive;
             // read from PIPE row by row
             int response = read(mpipe[0], &receive, sizeof(MSG));
-            printf("parent received %d\n", (int)receive.child_pid);
-            if (response < 0){
+            printf("parent received %d\n", receive.row_index);
+            if (response <= 0){
                 printf("Error in reading from MSG pipe with pid %d\n", (int)getpid());
+                break;
             }
+            
             //printf("received response code %d\n", response);
             //printf("receive row %d\n",receive.row_index);
             //printf("receive pid %d\n", receive.child_pid);
-            //printf("receive rowdata %f\n", receive.rowdata[0]);
-            if (response == 0){
-                break;
-            }
+            //printf("parent receive rowdata %f\n", receive.rowdata[0]);
+            //if (response == 0){
+                
+            //}
             // checking against any unlinkely garbage value that migt cause segmentation fault
             
-            if (receive.row_index >= 0 && receive.row_index <= IMAGE_HEIGHT){
+            if (receive.row_index >= 0 && receive.row_index < IMAGE_HEIGHT){
                 for(int j=0; j<IMAGE_WIDTH; j++){
                 // Copy data received from PIPE to pixels array for drawing
+                //printf("Parent received row_index %d with rowdata %f \n", receive.row_index, receive.rowdata[j]);
                 pixels[receive.row_index*IMAGE_WIDTH+j] = receive.rowdata[j];
             }
             }
             // checking if the received message contains the worker's PID
+            if (receive.row_index == IMAGE_HEIGHT-1){
+                break;
+            }
             int flag = 0;
             for (int i=0 ; i < num_child; i++){
                 
@@ -284,6 +293,7 @@ int main( int argc, char* args[] )
                 }
             }
             
+
             if (flag == 1){
                 printf("I reached here with r_count %d and IMAGE_HEIGHT %d\n", r_count, IMAGE_HEIGHT);
                 if (r_count < IMAGE_HEIGHT){
@@ -299,11 +309,7 @@ int main( int argc, char* args[] )
                     kill(receive.child_pid,SIGUSR1);
                     sleep(1);
                 }
-                else
-                {
-                    break;
-                }
-                
+                  
             }
             
             
