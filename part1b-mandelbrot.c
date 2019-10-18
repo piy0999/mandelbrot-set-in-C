@@ -40,7 +40,8 @@ int mpipe[2];
 int tpipe[2];
 
 //SEE IF YOU CAN USE THIS AS A STRUCT TO COUNT THE NUM OF TASKS PROCESSED
-pid_t pid[16];
+int pid[16];
+int c_pid[16];
 
 void sigint_handler() {
 
@@ -242,6 +243,7 @@ int main( int argc, char* args[] )
         sleep(1);
         kill(pid[i],SIGUSR1);
         sleep(1);
+        c_pid[i] = 1;
     }
     /*
     for (int i=0 ; i < num_child; i++){
@@ -290,6 +292,7 @@ int main( int argc, char* args[] )
                 
                 if (pid[i] == receive.child_pid){
                     flag = 1;
+                    c_pid[i] += 1;
                 }
             }
             
@@ -326,7 +329,7 @@ int main( int argc, char* args[] )
         // Wait until the child gets terminated
         while (count < num_child){
         pid_t terminated = wait(NULL);
-        printf("Child process %d terminated and completed tasks\n",terminated);
+        printf("Child process %d terminated and completed %d tasks\n",terminated,c_pid[count]);
         // Do this until all child are terminated
         count += 1;
         }
