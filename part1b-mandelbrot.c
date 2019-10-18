@@ -51,7 +51,7 @@ void sigint_handler() {
 
 void sigusr1_handler() {
     //close(tpipe[1]);
-    printf("Received SIGUSR1\n");
+    //printf("Received SIGUSR1\n");
     TASK received;
     if (read(tpipe[0], &received, sizeof(TASK)) < 0){
         printf("Error in reading from Task pipe with pid %d\n", (int)getpid());
@@ -87,7 +87,7 @@ void sigusr1_handler() {
     st_row_count += 1;
     }
     // write each row from array of structs to PIPE, hence write ROW BY ROW
-    printf("A child reached here with pid %d and st_row_ct %d\n", (int)getpid(), st_row_count);
+    //printf("A child reached here with pid %d and st_row_ct %d\n", (int)getpid(), st_row_count);
     for (int i = 0; i < st_row_count; i++){
         if (write(mpipe[1], &child[i], sizeof(MSG)) < 0){
             printf("Error in writing to MSG pipe with pid %d\n", (int)getpid());
@@ -99,13 +99,6 @@ void sigusr1_handler() {
     clock_gettime(CLOCK_MONOTONIC, &end_compute);
 	float difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;
 	printf("Child(%d) :     ... completed. Elapse time = %.3f ms\n", (int)getpid(),difftime);
-    
-    if (received.start_row+received.num_of_rows >= IMAGE_HEIGHT){
-        printf("I CAME TO CLOSE THE WRITE PIPE IN CHILD\n");
-    if (close(mpipe[1]) < 0){
-        printf("Error in Closing write for Mpipe with pid %d\n", (int)getpid());
-    }
-    }
     
 }
 
@@ -261,7 +254,7 @@ int main( int argc, char* args[] )
             MSG receive;
             // read from PIPE row by row
             int response = read(mpipe[0], &receive, sizeof(MSG));
-            printf("parent received %d\n", receive.row_index);
+            //printf("parent received %d\n", receive.row_index);
             if (response <= 0){
                 printf("Error in reading from MSG pipe with pid %d\n", (int)getpid());
                 break;
@@ -292,13 +285,15 @@ int main( int argc, char* args[] )
                 
                 if (pid[i] == receive.child_pid){
                     flag = 1;
+                    if (r_count < IMAGE_HEIGHT){
                     c_pid[i] += 1;
+                    }
                 }
             }
             
 
             if (flag == 1){
-                printf("I reached here with r_count %d and IMAGE_HEIGHT %d\n", r_count, IMAGE_HEIGHT);
+                //printf("I reached here with r_count %d and IMAGE_HEIGHT %d\n", r_count, IMAGE_HEIGHT);
                 if (r_count < IMAGE_HEIGHT){
                     TASK send;
                     send.num_of_rows = num_rows;
@@ -306,7 +301,7 @@ int main( int argc, char* args[] )
                     if (write(tpipe[1], &send, sizeof(TASK)) < 0){
                         printf("Error in writing to Task pipe with pid %d\n", (int)getpid());
                     }
-                    printf("parent sent %d\n", send.start_row);
+                    //printf("parent sent %d\n", send.start_row);
                     r_count += num_rows;
                     sleep(1);
                     kill(receive.child_pid,SIGUSR1);
@@ -319,7 +314,7 @@ int main( int argc, char* args[] )
         }
 
         for (int i=0 ; i < num_child; i++){
-            printf("Sending SIGINT NOW\n");
+            //printf("Sending SIGINT NOW\n");
             sleep(1);
             kill(pid[i],SIGINT);
             sleep(1);
