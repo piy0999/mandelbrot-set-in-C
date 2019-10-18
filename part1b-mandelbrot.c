@@ -93,8 +93,7 @@ void sigusr1_handler() {
             printf("Error in writing to MSG pipe with pid %d\n", (int)getpid());
         }
     }
-    // Free the memory space consumed by this array of structs as it is not needed anymore after being written back to the parent
-    free(child);
+    
     // Finish computation time recording
     clock_gettime(CLOCK_MONOTONIC, &end_compute);
 	float difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;
