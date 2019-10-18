@@ -1,14 +1,14 @@
-/* 2019-20 Programming Project
-	File Name: part1b-mandelbrot.c 
-    Name: Piyush Jha
-    UID: 3035342691
-    Date: 16 October 2019
-    Version: 1
-    Development Platform: Ubuntu 18.04 VM
-    Compilation: gcc part1b-mandelbrot.c -o 1bmandel -l SDL2 -l m
-    Usage: ./1bmandel [number of child processes] [number of rows in a task]
-    Example Use: ./1bmandel 5 20
-    */
+/************************************************************* 
+* Filename: part1b-mandelbrot.c 
+* Student name: Piyush Jha
+* Student no.: 3035342691
+* Date: Oct 19, 2019
+* version: 1.1
+* Development platform: Ubuntu 18.04 Cloud VM
+* Compilation: gcc part1b-mandelbrot.c -o 1bmandel -l SDL2 -l m
+* Usage: ./1bmandel [number of child processes] [number of rows in a task]
+* Example Use: ./1bmandel 5 20
+*************************************************************/
 
 //Using SDL2 and standard IO
 #include <signal.h> 
@@ -22,13 +22,13 @@
 #include "Mandel.h"
 #include "draw.h"
 
-// Using MSG struct as provided in specification for project
+// Using MSG struct as provided in specification of project
 typedef struct message {
     int row_index;
     pid_t child_pid;
     float rowdata[IMAGE_WIDTH];
 } MSG;
-
+// Using TASK struct as provided in specification of project
 typedef struct task {
     int start_row;
     int num_of_rows;

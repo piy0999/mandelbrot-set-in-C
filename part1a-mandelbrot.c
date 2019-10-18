@@ -1,14 +1,14 @@
-/* 2019-20 Programming Project
-	File Name: part1a-mandelbrot.c 
-    Name: Piyush Jha
-    UID: 3035342691
-    Date: 16 October 2019
-    Version: 1
-    Development Platform: Ubuntu 18.04 VM
-    Compilation: gcc part1a-mandelbrot.c -o 1amandel -l SDL2 -l m
-    Usage: ./1amandel [number of child processes]
-    Example Use: ./1amandel 5
-    */
+/************************************************************* 
+* Filename: part1a-mandelbrot.c 
+* Student name: Piyush Jha
+* Student no.: 3035342691
+* Date: Oct 19, 2019
+* version: 1.1
+* Development platform: Ubuntu 18.04 Cloud VM
+* Compilation: gcc part1a-mandelbrot.c -o 1amandel -l SDL2 -l m
+* Usage: ./1amandel [number of child processes]
+* Example Use: ./1amandel 5
+*************************************************************/
 
 //Using SDL2 and standard IO
 #include <stdio.h>
