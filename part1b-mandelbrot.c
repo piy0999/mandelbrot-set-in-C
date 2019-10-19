@@ -187,7 +187,7 @@ int main( int argc, char* args[] )
     }
     // Send SIGUSR1 signal to each of the child to start computation
     for (int i=0 ; i < num_child; i++){
-        sleep(1);
+        //sleep(1);
         kill(pid[i],SIGUSR1);
         sleep(1);
         c_pid[i] = 1;
@@ -239,7 +239,7 @@ int main( int argc, char* args[] )
                         printf("Error in writing to Task pipe with pid %d\n", (int)getpid());
                     }
                     r_count += num_rows;
-                    sleep(1);
+                    //sleep(1);
                     kill(receive.child_pid,SIGUSR1);
                     sleep(1);
                 }
@@ -250,7 +250,7 @@ int main( int argc, char* args[] )
         }
     // While loop terminates and processing has finished so send SIGINT to each child to terminate the child processes
     for (int i=0 ; i < num_child; i++){
-            sleep(1);
+            //sleep(1);
             kill(pid[i],SIGINT);
             sleep(1);
     }
