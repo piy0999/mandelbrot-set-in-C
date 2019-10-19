@@ -74,30 +74,22 @@ int main( int argc, char* args[] )
             close(pfd[0]);
             printf("Child(%d) :Start the computation ...\n", (int)getpid());
             // Create an array of struct MSG for storing all the computations done by this child
-            MSG *child = malloc(rows*sizeof(MSG));
-            if (child == NULL) {
-                    printf("Out of memory, can't create child MSG struct array!!\n");
-                    exit(1);
-            }
-            int st_row_count = 0; //this count is for array of struct message
+            MSG child;
+            //int st_row_count = 0; //this count is for array of struct message
             
             for (int y=vert; y<rows+vert; y++) {
             // Avoid passing IMAGE_HEIGHT during loop
             if (y >= IMAGE_HEIGHT){
                 break;
             }
-            child[st_row_count].row_index = y;
+            child.row_index = y;
             for (int x=0; x<IMAGE_WIDTH; x++) {
                 //compute a value for each point c (x, y) in the complex plane and store in array of struct message
-                child[st_row_count].rowdata[x] = Mandelbrot(x, y);
+                child.rowdata[x] = Mandelbrot(x, y);
     	    }
-            st_row_count += 1;
+            write(pfd[1], &child, sizeof(MSG));
             }
-            // write each row from array of structs to PIPE, hence write ROW BY ROW
-            for (int i = 0; i < st_row_count; i++){
-                write(pfd[1], &child[i], sizeof(MSG));
-            }
-            st_row_count = 0;
+            
             // Finish computation time recording
             clock_gettime(CLOCK_MONOTONIC, &end_compute);
 	        difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;
