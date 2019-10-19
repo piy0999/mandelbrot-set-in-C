@@ -73,10 +73,8 @@ int main( int argc, char* args[] )
             // As Child only writes to the PIPE, the reading from PIPE is closed
             close(pfd[0]);
             printf("Child(%d) :Start the computation ...\n", (int)getpid());
-            // Create an array of struct MSG for storing all the computations done by this child
+            // Create a struct MSG for storing the computations done by this child
             MSG child;
-            //int st_row_count = 0; //this count is for array of struct message
-            
             for (int y=vert; y<rows+vert; y++) {
             // Avoid passing IMAGE_HEIGHT during loop
             if (y >= IMAGE_HEIGHT){
@@ -89,7 +87,6 @@ int main( int argc, char* args[] )
     	    }
             write(pfd[1], &child, sizeof(MSG));
             }
-            
             // Finish computation time recording
             clock_gettime(CLOCK_MONOTONIC, &end_compute);
 	        difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;

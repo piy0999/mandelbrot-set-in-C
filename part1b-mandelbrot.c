@@ -62,7 +62,7 @@ void sigusr1_handler() {
     clock_gettime(CLOCK_MONOTONIC, &start_compute);
     
     printf("Child(%d) : Start the computation ...\n", (int)getpid());
-    // Create an array of struct MSG for storing all the computations done by this child
+    // Create a struct MSG for storing the computations done by this child
     MSG child;
             
     for (int y=received.start_row; y<received.start_row+received.num_of_rows; y++) {
@@ -72,6 +72,7 @@ void sigusr1_handler() {
     }
     child.row_index = y;
     child.child_pid = -1;
+    // Add PID to last row of computation
     if (y == ((received.start_row+received.num_of_rows)-1)){
         child.child_pid = (int)getpid();
     }
@@ -187,7 +188,6 @@ int main( int argc, char* args[] )
     }
     // Send SIGUSR1 signal to each of the child to start computation
     for (int i=0 ; i < num_child; i++){
-        //sleep(1);
         kill(pid[i],SIGUSR1);
         sleep(1);
         c_pid[i] = 1;
@@ -198,9 +198,13 @@ int main( int argc, char* args[] )
             MSG receive;
             // read from message PIPE row by row
             int response = read(mpipe[0], &receive, sizeof(MSG));
-            // If EOF or error in read then break out of loop
-            if (response <= 0){
+            // If error in read then break out of loop
+            if (response < 0){
                 printf("Error in reading from MSG pipe with pid %d\n", (int)getpid());
+                break;
+            }
+            // If EOF in read then break out of loop
+            if (response == 0){
                 break;
             }
             
@@ -213,9 +217,12 @@ int main( int argc, char* args[] )
             }
             }
             // If all the results have been received (the last row index is returned) then terminate loop
+            // This is based on the Atomicity of PIPE as PIPE is a FIFO structure and according to logic last row index woul be the last
+            // to be written to PIPE and hence its return should mean all the data has been received
             if (receive.row_index == IMAGE_HEIGHT-1){
                 break;
             }
+            
             // checking if the received message contains the worker's PID
             int flag = 0;
             for (int i=0 ; i < num_child; i++){
@@ -239,7 +246,6 @@ int main( int argc, char* args[] )
                         printf("Error in writing to Task pipe with pid %d\n", (int)getpid());
                     }
                     r_count += num_rows;
-                    //sleep(1);
                     kill(receive.child_pid,SIGUSR1);
                     sleep(1);
                 }
@@ -250,7 +256,6 @@ int main( int argc, char* args[] )
         }
     // While loop terminates and processing has finished so send SIGINT to each child to terminate the child processes
     for (int i=0 ; i < num_child; i++){
-            //sleep(1);
             kill(pid[i],SIGINT);
             sleep(1);
     }
