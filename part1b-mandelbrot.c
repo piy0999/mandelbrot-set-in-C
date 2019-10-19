@@ -84,7 +84,11 @@ void sigusr1_handler() {
             printf("Error in writing to MSG pipe with pid %d\n", (int)getpid());
         }
     }
-    
+    if (received.start_row+received.num_of_rows == IMAGE_HEIGHT){
+        if (close(mpipe[1]) < 0){
+            printf("Error in closing MSG pipe with pid %d\n", (int)getpid());
+        }
+    }
     // write each row from array of structs to PIPE, hence write ROW BY ROW
     // Finish computation time recording
     clock_gettime(CLOCK_MONOTONIC, &end_compute);
@@ -146,7 +150,7 @@ int main( int argc, char* args[] )
             signal(SIGINT, sigint_handler);
             signal(SIGUSR1, sigusr1_handler);
 
-            // As Child only reads from the MSG PIPE, the writing to PIPE is closed
+            // As Child only reads from the TASK PIPE, the writing to PIPE is closed
             if (close(tpipe[1]) < 0){
                 printf("Error in Closing write for Tpipe with pid %d\n", (int)getpid());
             }
@@ -219,10 +223,11 @@ int main( int argc, char* args[] )
             // If all the results have been received (the last row index is returned) then terminate loop
             // This is based on the Atomicity of PIPE as PIPE is a FIFO structure and according to logic last row index woul be the last
             // to be written to PIPE and hence its return should mean all the data has been received
+            /*
             if (receive.row_index == IMAGE_HEIGHT-1){
                 break;
             }
-            
+            */
             // checking if the received message contains the worker's PID
             int flag = 0;
             for (int i=0 ; i < num_child; i++){
