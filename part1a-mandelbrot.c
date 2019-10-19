@@ -20,7 +20,6 @@
 #include <sys/resource.h>
 #include "Mandel.h"
 #include "draw.h"
-
 // Using MSG struct as provided in specification for project
 typedef struct message {
     int row_index;
