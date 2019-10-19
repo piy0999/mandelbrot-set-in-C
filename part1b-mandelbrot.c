@@ -63,37 +63,28 @@ void sigusr1_handler() {
     
     printf("Child(%d) : Start the computation ...\n", (int)getpid());
     // Create an array of struct MSG for storing all the computations done by this child
-    MSG *child = malloc(received.num_of_rows*sizeof(MSG));
-    if (child == NULL) {
-        printf("Out of memory, can't create child MSG struct array!!\n");
-        exit(1);
-    }
-    int st_row_count = 0; //this count is for array of struct message
+    MSG child;
             
     for (int y=received.start_row; y<received.start_row+received.num_of_rows; y++) {
     // Avoid passing value > IMAGE_HEIGHT during loop
     if (y >= IMAGE_HEIGHT){
         break;
     }
-    child[st_row_count].row_index = y;
-    child[st_row_count].child_pid = 0;
-    if (st_row_count == (received.num_of_rows-1)){
-        child[st_row_count].child_pid = (int)getpid();
+    child.row_index = y;
+    child.child_pid = -1;
+    if (y == ((received.start_row+received.num_of_rows)-1)){
+        child.child_pid = (int)getpid();
     }
     for (int x=0; x<IMAGE_WIDTH; x++) {
         //compute a value for each point c (x, y) in the complex plane and store in array of struct message
-        child[st_row_count].rowdata[x] = Mandelbrot(x, y);
+        child.rowdata[x] = Mandelbrot(x, y);
     }
-    st_row_count += 1;
-    }
-    
-    // write each row from array of structs to PIPE, hence write ROW BY ROW
-    for (int i = 0; i < st_row_count; i++){
-        if (write(mpipe[1], &child[i], sizeof(MSG)) < 0){
+    if (write(mpipe[1], &child, sizeof(MSG)) < 0){
             printf("Error in writing to MSG pipe with pid %d\n", (int)getpid());
         }
     }
     
+    // write each row from array of structs to PIPE, hence write ROW BY ROW
     // Finish computation time recording
     clock_gettime(CLOCK_MONOTONIC, &end_compute);
 	float difftime = (end_compute.tv_nsec - start_compute.tv_nsec)/1000000.0 + (end_compute.tv_sec - start_compute.tv_sec)*1000.0;
